@@ -1,9 +1,16 @@
 using System;
 using System.Runtime.InteropServices;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
+using WalletConnect.Web3Modal.WebGl;
+using WalletConnect.Web3Modal.WebGl.Wagmi;
 
 public class Main : MonoBehaviour
 {
+    [SerializeField] private TMP_InputField _messageInputField;
+    [SerializeField] private Button _signMessageButton;
+    
     [DllImport("__Internal")]
     private static extern void PreloadWeb3Modal(string projectId, string appName, string appLogoUrl);
 
@@ -11,15 +18,26 @@ public class Main : MonoBehaviour
     private static extern void OpenWeb3Modal();
 
     [DllImport("__Internal")]
-    private static extern void ConnectWallet(string connectorName);
+    private static extern void WagmiCall(int id, string methodName, string payload, InteropService.ExternalMethodCallback callback);
+
+    private void Awake()
+    {
+        _messageInputField.onValueChanged.AddListener(OnMessageValueChanged);
+        _signMessageButton.interactable = false;
+    }
 
     private void Start()
     {
-        string projectId = "bd4997ce3ede37c95770ba10a3804dad";
-        string appName = "Web3Modal";
-        string appLogoUrl = "https://avatars.githubusercontent.com/u/37784886";
+        var projectId = "bd4997ce3ede37c95770ba10a3804dad";
+        var appName = "Web3Modal";
+        var appLogoUrl = "https://avatars.githubusercontent.com/u/37784886";
 
         PreloadWeb3Modal(projectId, appName, appLogoUrl);
+    }
+
+    private void OnMessageValueChanged(string value)
+    {
+        _signMessageButton.interactable = !string.IsNullOrEmpty(value);
     }
 
     public void OnConnectClicked()
@@ -32,6 +50,37 @@ public class Main : MonoBehaviour
     public void OpenModal()
     {
         OpenWeb3Modal();
+    }
+
+    [Serializable]
+    private struct WrongType
+    {
+        public int number;
+    }
+
+    [Serializable]
+    private struct SignMessagePayload
+    {
+        public string message;
+    }
+
+    public async void OnSignClicked()
+    {
+        var param = new SignMessageParameter
+        {
+            message = _messageInputField.text
+        };
+
+        var wagmi = new WagmiInterop();
+
+        var result = await wagmi.SignMessageAsync(param);
+
+        Debug.Log($"Result: {result}");
+    }
+
+    public void OnSignMessage(string signature)
+    {
+        Debug.Log($"[Unity] OnSignMessage: {signature}");
     }
     
 }

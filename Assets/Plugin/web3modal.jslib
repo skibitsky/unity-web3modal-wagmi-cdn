@@ -3,10 +3,10 @@ mergeInto(LibraryManager.library, {
     _web3ModalConfig: null,
 
     // Method to preload the scripts from CDN
-    PreloadWeb3Modal: function (projectIdPtr, appNamePtr, appLogoUrlPtr) {
+    PreloadWeb3Modal: function (projectIdPtr, appNameStrPtr, appLogoUrlStrPtr) {
         var projectId = UTF8ToString(projectIdPtr);
-        var appName = UTF8ToString(appNamePtr);
-        var appLogoUrl = UTF8ToString(appLogoUrlPtr);
+        var appName = UTF8ToString(appNameStrPtr);
+        var appLogoUrl = UTF8ToString(appLogoUrlStrPtr);
         
         console.log("Preloading Web3Modal with Project ID:", projectId);
 
@@ -59,7 +59,8 @@ mergeInto(LibraryManager.library, {
             // Store the configuration and modal globally
             _web3ModalConfig = {
                 config: config,
-                modal: modal
+                modal: modal,
+                wagmiCore: WagmiCore
             };
         });
     },
@@ -71,4 +72,27 @@ mergeInto(LibraryManager.library, {
             console.error("Web3Modal is not initialized. Call PreloadWeb3Modal first.");
         }
     },
+    WagmiCall: async function(id, methodNameStrPtr, parameterStrPtr, callbackPtr) {
+        if (_web3ModalConfig) {
+            var methodName = UTF8ToString(methodNameStrPtr);
+            var parameterStr = UTF8ToString(parameterStrPtr);
+            var parameter = JSON.parse(parameterStr);
+            
+            try {
+                var result = await _web3ModalConfig.wagmiCore[methodName](_web3ModalConfig.config, parameter);
+                
+                var resultJson = JSON.stringify(result);
+                var resultStrBuffer = stringToNewUTF8(resultJson);
+                {{{ makeDynCall('viii', 'callbackPtr') }}} (id, resultStrBuffer, undefined);
+                _free(resultStrBuffer);
+            } catch (error) {
+                var errorJson = JSON.stringify(error, ['name', 'message']);
+                var errorStrBuffer = stringToNewUTF8(errorJson);
+                {{{ makeDynCall('viii', 'callbackPtr') }}} (id, undefined, errorStrBuffer);
+                _free(errorStrBuffer);
+            }
+        } else {
+            console.error("Web3Modal is not initialized. Call PreloadWeb3Modal first.");
+        }
+    }
 });
