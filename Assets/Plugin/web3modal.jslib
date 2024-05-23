@@ -73,26 +73,46 @@ mergeInto(LibraryManager.library, {
         }
     },
     WagmiCall: async function(id, methodNameStrPtr, parameterStrPtr, callbackPtr) {
-        if (_web3ModalConfig) {
-            var methodName = UTF8ToString(methodNameStrPtr);
-            var parameterStr = UTF8ToString(parameterStrPtr);
-            var parameter = JSON.parse(parameterStr);
-            
-            try {
-                var result = await _web3ModalConfig.wagmiCore[methodName](_web3ModalConfig.config, parameter);
-                
-                var resultJson = JSON.stringify(result);
-                var resultStrBuffer = stringToNewUTF8(resultJson);
-                {{{ makeDynCall('viii', 'callbackPtr') }}} (id, resultStrBuffer, undefined);
-                _free(resultStrBuffer);
-            } catch (error) {
-                var errorJson = JSON.stringify(error, ['name', 'message']);
-                var errorStrBuffer = stringToNewUTF8(errorJson);
-                {{{ makeDynCall('viii', 'callbackPtr') }}} (id, undefined, errorStrBuffer);
-                _free(errorStrBuffer);
-            }
-        } else {
+        if (!_web3ModalConfig) {
             console.error("Web3Modal is not initialized. Call PreloadWeb3Modal first.");
+            return;
+        }
+        
+        // Convert the method name and parameter to JS strings
+        let methodName = UTF8ToString(methodNameStrPtr);
+        let parameterStr = UTF8ToString(parameterStrPtr);
+        
+        let parameterObj = parameterStr === "" ? undefined : JSON.parse(parameterStr);
+        
+        try {
+            if (typeof _web3ModalConfig.wagmiCore[methodName] !== 'function') {
+                throw new Error(`Method ${methodName} does not exist on wagmiCore.`);
+                return;
+            }
+            
+            // Call the method and get the result
+            let result = await _web3ModalConfig.wagmiCore[methodName](_web3ModalConfig.config, parameterObj);
+            
+            // Convert the result to JSON. Handle circular references.
+            let cache = [];
+            let resultJson = JSON.stringify(result, (key, value) => {
+                if (typeof value === 'object' && value !== null) {
+                    if (cache.includes(value)) return;
+                    cache.push(value);
+                }
+                return value;
+            });
+            cache = null;
+            
+            // Call the callback with the result
+            let resultStrPtr = stringToNewUTF8(resultJson);
+            {{{ makeDynCall('viii', 'callbackPtr') }}} (id, resultStrPtr, undefined);
+            _free(resultStrPtr);
+        } catch (error) {
+            let errorJson = JSON.stringify(error, ['name', 'message']);
+            let errorStrPtr = stringToNewUTF8(errorJson);
+            {{{ makeDynCall('viii', 'callbackPtr') }}} (id, undefined, errorStrPtr);
+            _free(errorStrPtr);
         }
     }
 });

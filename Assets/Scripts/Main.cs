@@ -78,6 +78,14 @@ public class Main : MonoBehaviour
         Debug.Log($"Result: {result}");
     }
 
+    public async void OnGetAccountClicked()
+    {
+        var wagmi = new WagmiInterop();
+        var account = await wagmi.GetAccountAsync();
+
+        Debug.Log($"{account.chainId}:{account.address}");
+    }
+
     public void OnSignMessage(string signature)
     {
         Debug.Log($"[Unity] OnSignMessage: {signature}");
