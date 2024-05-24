@@ -14,7 +14,7 @@ mergeInto(LibraryManager.library, {
         import("https://cdn.jsdelivr.net/npm/cdn-wagmi@3.0.0/dist/cdn-wagmi.js").then(CDNW3M => {
             const { WagmiCore, Chains, Web3modal, Connectors } = CDNW3M;
             const { createWeb3Modal, defaultWagmiConfig } = Web3modal;
-            const { mainnet, sepolia } = Chains;
+            const { mainnet, polygon, sepolia } = Chains;
             const { coinbaseWallet, walletConnect, injected } = Connectors;
             const { createConfig, http, reconnect } = WagmiCore;
             
@@ -28,9 +28,10 @@ mergeInto(LibraryManager.library, {
             };
 
             const config = createConfig({
-                chains: [mainnet, sepolia],
+                chains: [mainnet, polygon, sepolia],
                 transports: {
                     [mainnet.id]: http(),
+                    [polygon.id]: http(),
                     [sepolia.id]: http()
                 },
                 connectors: [
@@ -43,6 +44,7 @@ mergeInto(LibraryManager.library, {
                 ]
             });
             
+            console.log(config.connectors);
             console.log("Web3Modal configuration loaded successfully");
 
             reconnect(config);
@@ -90,15 +92,22 @@ mergeInto(LibraryManager.library, {
                 return;
             }
             
+            console.log("Calling WagmiCore method", methodName, parameterObj);
+            
             // Call the method and get the result
             let result = await _web3ModalConfig.wagmiCore[methodName](_web3ModalConfig.config, parameterObj);
             
-            // Convert the result to JSON. Handle circular references.
+            // Convert the result to JSON
             let cache = [];
             let resultJson = JSON.stringify(result, (key, value) => {
+                // Handle circular references
                 if (typeof value === 'object' && value !== null) {
                     if (cache.includes(value)) return;
                     cache.push(value);
+                }
+                // Check if the value is a BigInt and convert it to a string
+                if (typeof value === 'bigint') {
+                    return value.toString();
                 }
                 return value;
             });

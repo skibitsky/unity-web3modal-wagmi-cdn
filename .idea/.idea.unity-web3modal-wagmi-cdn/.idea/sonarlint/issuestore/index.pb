@@ -15,3 +15,5 @@ Z
 ,Assets/Scripts/Interop/Wagmi/WagmiMethods.cs,9/6/96160716eeef5d024e33ee0f9a555c1b80cd49c0
 Z
 *Assets/Scripts/Interop/Wagmi/WagmiTypes.cs,1/1/11cbfc49ea088679be83b60c868e9f9ad52401e3
+E
+Assets/Scripts/Abi.cs,a/0/a086c247315262bfe7d0640ea6e07a234e559a7f

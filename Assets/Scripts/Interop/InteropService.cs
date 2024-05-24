@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AOT;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace WalletConnect.Web3Modal.WebGl
@@ -30,9 +31,12 @@ namespace WalletConnect.Web3Modal.WebGl
             PendingInteropCalls.Add(id, pendingInteropCall);
 
             string paramStr = null;
-            if (requestParameter != null)
+            if (!Equals(requestParameter, default(TReq)))
             {
-                paramStr = JsonUtility.ToJson(requestParameter);
+                if (typeof(TReq) == typeof(string))
+                    paramStr = requestParameter as string;
+                else
+                    paramStr = JsonConvert.SerializeObject(requestParameter);
             }
 
             _externalMethod(id, methodName, paramStr, TcsCallback);
@@ -54,7 +58,7 @@ namespace WalletConnect.Web3Modal.WebGl
             {
                 try
                 {
-                    var error = JsonUtility.FromJson<InteropCallError>(responseError);
+                    var error = JsonConvert.DeserializeObject<InteropCallError>(responseError);
                     if (error != null)
                     {
                         pendingCall.TaskCompletionSource.SetException(new InteropException(error.message));
@@ -73,7 +77,7 @@ namespace WalletConnect.Web3Modal.WebGl
             object res = null;
             if (pendingCall.ResType == typeof(string))
             {
-                res = responseData;
+                res = responseData.Trim('"');
             }
             else if (pendingCall.ResType == typeof(int) && int.TryParse(responseData, out var intResult))
             {
@@ -99,7 +103,7 @@ namespace WalletConnect.Web3Modal.WebGl
             {
                 try
                 {
-                    res = JsonUtility.FromJson(responseData, pendingCall.ResType);
+                    res = JsonConvert.DeserializeObject(responseData, pendingCall.ResType);
                 }
                 catch (Exception e)
                 {
